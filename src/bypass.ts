@@ -25,6 +25,10 @@ export async function bypass(url: string): Promise<{ url: string, cookies: strin
   });
   const page = browser.getPage();
 
+  function safeFilename(url: string) {
+    return url.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  }
+
   try {
     console.log(`🔗 Navigating to ${url}`);
     await browser.navigate(url);
@@ -43,8 +47,11 @@ export async function bypass(url: string): Promise<{ url: string, cookies: strin
 
     const cookies = await page.cookies();
     const cookieStrings = cookies.map((c: { name: string; value: string }) => `${c.name}=${c.value}`);
+    const cookieFile = `./cookies/${safeFilename(url)}.json`;
+    fs.writeFileSync(cookieFile, JSON.stringify(cookies, null, 2));
+    console.log('Cookies:', cookieStrings);
 
-    const screenshotFile = path.resolve(`./screenshot-${new URL(url).hostname}.png`);
+    const screenshotFile = path.join('./screenshot', `${safeFilename(url)}.png`);
     await page.screenshot({ path: screenshotFile as `${string}.png` });
 
     await browser.close();
@@ -59,4 +66,12 @@ export async function bypass(url: string): Promise<{ url: string, cookies: strin
     await browser.close();
     throw err;
   }
+} 
+
+if (require.main === module) {
+  (async () => {
+    for (const url of TARGET_URLS) {
+      await bypass(url);
+    }
+  })();
 }
